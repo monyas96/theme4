@@ -564,6 +564,119 @@ def create_bar_chart(
         )
         return fig
 
+def create_stacked_bar_chart(
+    data,
+    x_column='year',
+    value_column='value',
+    title='Stacked Bar Chart',
+    x_label=None,
+    y_label=None,
+    height=400,
+    width=None,
+    intended_color='#FF0000',  # Red for intended
+    actual_color='#00FF00',    # Green for actual
+    **kwargs
+):
+    """
+    Creates a stacked bar chart showing intended vs actual expenditure.
+    
+    Assumes value_column contains actual expenditure as percentage of intended.
+    Creates two series: Intended (100%) and Actual (value%).
+    
+    Args:
+        data: DataFrame with year and value columns
+        x_column: Column name for x-axis (typically 'year')
+        value_column: Column name for actual expenditure percentage
+        title: Chart title
+        x_label: X-axis label
+        y_label: Y-axis label
+        height: Chart height
+        width: Chart width
+        intended_color: Color for intended expenditure (default: red)
+        actual_color: Color for actual expenditure (default: green)
+    """
+    if data is None or data.empty:
+        st.warning("No data provided for stacked bar chart.")
+        fig = go.Figure().update_layout(title_text=f"{title} (No Data)", height=height, width=width)
+        return fig
+    
+    # Ensure required columns exist
+    required_cols = [x_column, value_column]
+    missing_cols = [col for col in required_cols if col not in data.columns]
+    if missing_cols:
+        st.error(f"Missing required columns for stacked bar chart: {', '.join(missing_cols)}")
+        fig = go.Figure().update_layout(title_text=f"{title} (Error: Missing Columns)", height=height, width=width)
+        return fig
+    
+    # Convert value to numeric
+    plot_data = data.copy()
+    plot_data[value_column] = pd.to_numeric(plot_data[value_column], errors='coerce')
+    plot_data = plot_data.dropna(subset=[value_column])
+    
+    if plot_data.empty:
+        st.warning("No valid numeric data to plot after cleaning.")
+        fig = go.Figure().update_layout(title_text=f"{title} (No Valid Data)", height=height, width=width)
+        return fig
+    
+    # Group by year and calculate aggregates
+    # For each year, show: Actual (value%) and Gap (100% - value%)
+    plot_data['actual_pct'] = plot_data[value_column]
+    plot_data['gap_pct'] = 100 - plot_data[value_column]
+    
+    # Aggregate by year (average if multiple countries, or sum if single country)
+    if 'country_or_area' in plot_data.columns:
+        # If multiple countries, show average
+        yearly_data = plot_data.groupby(x_column).agg({
+            'actual_pct': 'mean',
+            'gap_pct': 'mean'
+        }).reset_index()
+    else:
+        yearly_data = plot_data.groupby(x_column).agg({
+            'actual_pct': 'sum',
+            'gap_pct': 'sum'
+        }).reset_index()
+    
+    # Create stacked bar chart
+    fig = go.Figure()
+    
+    # Add gap (intended - actual) as bottom stack (red)
+    fig.add_trace(go.Bar(
+        x=yearly_data[x_column],
+        y=yearly_data['gap_pct'],
+        name='Intended Expenditure (Gap)',
+        marker_color=intended_color,
+        hovertemplate='<b>%{x}</b><br>Intended (Gap): %{y:.1f}%<extra></extra>'
+    ))
+    
+    # Add actual expenditure as top stack (green)
+    fig.add_trace(go.Bar(
+        x=yearly_data[x_column],
+        y=yearly_data['actual_pct'],
+        name='Actual Expenditure',
+        marker_color=actual_color,
+        hovertemplate='<b>%{x}</b><br>Actual: %{y:.1f}%<extra></extra>'
+    ))
+    
+    # Update layout
+    fig.update_layout(
+        barmode='stack',
+        title=title,
+        xaxis_title=x_label or x_column.replace('_', ' ').title(),
+        yaxis_title=y_label or 'Percentage (%)',
+        height=height,
+        width=width,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        ),
+        hovermode='x unified'
+    )
+    
+    return fig
+
 def create_pefa_heatmap(
     data,
     x_column='year',
@@ -1255,6 +1368,10 @@ def render_indicator_section(
             y_col = chart_options.get('y', 'country_or_area')
             # For heatmap, value column is required but not used as y_col
             required_chart_cols = [x_col, y_col, 'value']
+        elif chart_type_normalized == "stacked_bar":
+            x_col = chart_options.get('x', 'year')
+            y_col = chart_options.get('y', 'value')
+            required_chart_cols = [x_col, 'value']
         elif chart_type_normalized == "line":
             x_col = chart_options.get('x', 'year')
             y_col = chart_options.get('y', 'value')
@@ -1300,6 +1417,14 @@ def render_indicator_section(
                 x_column=x_col,
                 y_column=y_col,
                 color_column=color_col, # Pass color_col for potential stacking
+                title="",
+                **chart_options.get('kwargs', {})
+            )
+        elif chart_type_normalized == "stacked_bar":
+            fig = create_stacked_bar_chart(
+                plot_df,
+                x_column=x_col,
+                value_column='value',
                 title="",
                 **chart_options.get('kwargs', {})
             )
