@@ -15,9 +15,8 @@ from special_pages.tab_4_4_1 import render_tab_4_4_1
 
 # Navigation - Home button and logo
 try:
-    from app_core.components.navigation import render_navigation_buttons, render_page_logo
+    from app_core.components.navigation import render_page_logo
     render_page_logo("top-right")
-    render_navigation_buttons()
 except ImportError:
     pass  # Navigation not critical
 
@@ -41,9 +40,40 @@ filters = uv.setup_sidebar_filters(ref_data, df_main, key_prefix="topic4_4")
 df_filtered = uv.filter_dataframe_by_selections(df_main, filters, ref_data)
 
 # ========================================
-# SECTION: Topic Header
+# SECTION: Topic Header with Home Button
 # ========================================
-with st.container():
+# Home button styling - horizontal text in light gray box
+st.markdown("""
+<style>
+    button[key="nav_home_topic_4_4"] {
+        background: #F9FAFB !important;
+        background-color: #F9FAFB !important;
+        color: #555 !important;
+        border: 1px solid #E5E7EB !important;
+        border-radius: 8px !important;
+        padding: 0.5rem 1rem !important;
+        font-weight: 600 !important;
+        font-size: 0.9rem !important;
+        line-height: 1.4 !important;
+        min-height: 40px !important;
+        transition: all 0.3s ease !important;
+        white-space: nowrap !important;
+    }
+    button[key="nav_home_topic_4_4"]:hover {
+        background: #F3F4F6 !important;
+        background-color: #F3F4F6 !important;
+        border-color: #D1D5DB !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+home_col, title_col = st.columns([0.15, 3.85])
+
+with home_col:
+    if st.button("Home", key="nav_home_topic_4_4", use_container_width=True):
+        st.switch_page("pages/00_prototype_switcher.py")
+
+with title_col:
     st.markdown("""
     <div class="section-header">
         <h1>Topic 4.4: Illicit Financial Flows (IFFs)</h1>

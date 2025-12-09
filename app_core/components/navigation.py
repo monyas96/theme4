@@ -238,19 +238,19 @@ def render_navigation_buttons():
     with col2:
         # Use st.page_link instead of st.button + st.switch_page for browser history support
         # st.page_link creates proper browser history entries (no key parameter supported)
-        st.page_link("pages/0_home.py", label="Home")
+        st.page_link("pages/00_prototype_switcher.py", label="Home")
 
     # Add home icon styling via JavaScript (st.page_link doesn't support custom icons easily)
     st.markdown("""
     <script>
         function initNavigation() {
             // Find home link - try multiple selectors
-            let homeLink = document.querySelector('a[href*="0_home"], a[href*="/pages/0_home"], a[href*="pages/0_home"]');
+            let homeLink = document.querySelector('a[href*="landing_switcher"], a[href*="0_home"], a[href*="/pages/0_home"], a[href*="pages/0_home"]');
             if (!homeLink) {
                 // Try finding by text content
                 const allLinks = document.querySelectorAll('a');
                 for (let link of allLinks) {
-                    if (link.textContent.trim() === 'Home' && (link.href.includes('0_home') || link.href.includes('home'))) {
+                    if (link.textContent.trim() === 'Home' && (link.href.includes('landing_switcher') || link.href.includes('0_home') || link.href.includes('home'))) {
                         homeLink = link;
                         break;
                     }

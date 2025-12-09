@@ -199,14 +199,14 @@ with col1:
     pass  # Empty space on left
 with col2:
     # Use st.page_link for browser history support
-    st.page_link("pages/0_home.py", label="Home")
+        st.page_link("pages/00_prototype_switcher.py", label="Home")
 
 # Add home icon styling via JavaScript (st.page_link doesn't support custom icons easily)
 st.markdown("""
 <script>
     function initNavigation() {
         // Find home link - try multiple selectors
-        let homeLink = document.querySelector('a[href*="0_home"], a[href*="/pages/0_home"], a[href*="pages/0_home"]');
+            let homeLink = document.querySelector('a[href*="landing_switcher"], a[href*="0_home"], a[href*="/pages/0_home"], a[href*="pages/0_home"]');
         if (!homeLink) {
             // Try finding by text content
             const allLinks = document.querySelectorAll('a');
