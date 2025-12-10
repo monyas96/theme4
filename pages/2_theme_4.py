@@ -3030,7 +3030,6 @@ elif st.session_state.current_view == 2:
                         st.dataframe(view2_df_main[available_cols].head(5), use_container_width=True, hide_index=True)
                     else:
                         st.dataframe(view2_df_main.head(5), use_container_width=True, hide_index=True)
-                st.caption(f"Total: {len(view2_df_main):,} rows")
             else:
                 st.info("Data not available in this session")
         
@@ -3040,7 +3039,6 @@ elif st.session_state.current_view == 2:
                 # Show sample of ref_data
                 with st.expander("View sample data (first 5 rows)", expanded=False):
                     st.dataframe(view2_ref_data.head(5), use_container_width=True, hide_index=True)
-                st.caption(f"Total: {len(view2_ref_data):,} countries")
             else:
                 st.info("Data not available in this session")
         
