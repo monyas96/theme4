@@ -1525,6 +1525,76 @@ def render_indicator_4424():
     except Exception as e:
         st.info(f"Unable to render graph: {str(e)}")
 
+def render_indicator_4424a():
+    """Render Corruption Loss vs Control of Corruption scatter plot - exact replica from exploratory view"""
+    if df_display.empty or not DATA_AVAILABLE:
+        st.info("Data not available. Please ensure data files are loaded.")
+        return
+    
+    try:
+        # Get Control of Corruption indicator
+        corruption_indicator_label = "Control of Corruption: Estimate"
+        chart_data = df_display[df_display['indicator_label'] == corruption_indicator_label].copy()
+        
+        if chart_data.empty:
+            st.info("No data available for Corruption indicator.")
+            return
+        
+        # Filter for Africa
+        africa_ref_data = ref_data[ref_data['Region Name'] == 'Africa'].copy() if not ref_data.empty else pd.DataFrame()
+        if not africa_ref_data.empty:
+            africa_countries = africa_ref_data['Country or Area'].unique()
+            chart_data = chart_data[chart_data['country_or_area'].isin(africa_countries)]
+        
+        if chart_data.empty:
+            st.info("No data available for selected region.")
+            return
+        
+        # Get latest year
+        latest_year = chart_data['year'].max()
+        year_data = chart_data[chart_data['year'] == latest_year].copy()
+        
+        if year_data.empty:
+            st.info("No data available for the latest year.")
+            return
+        
+        # Calculate corruption losses using the composite indicator method
+        corruption_losses = cim.calculate_corruption_losses(year_data)
+        
+        if corruption_losses.empty:
+            st.info("Unable to calculate corruption losses.")
+            return
+        
+        # Create scatter plot: Control of Corruption (x) vs Corruption Loss (y)
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=corruption_losses['value'],
+            y=corruption_losses['corruption_loss_billion_usd'],
+            mode='markers',
+            marker=dict(
+                size=10,
+                color=corruption_losses['corruption_loss_billion_usd'],
+                colorscale='Reds',
+                showscale=True,
+                colorbar=dict(title="Loss (Billion USD)")
+            ),
+            text=corruption_losses['country_or_area'],
+            hovertemplate="<b>%{text}</b><br>Control of Corruption: %{x:.2f}<br>Corruption Loss: %{y:.2f} Billion USD<br><extra></extra>"
+        ))
+        
+        fig.update_layout(
+            title="Indicator 4.4.2.4.a – Corruption Loss vs Control of Corruption",
+            xaxis_title="Control of Corruption Score",
+            yaxis_title="Estimated Corruption Loss (Billion USD)",
+            height=500,
+            hovermode='closest'
+        )
+        
+        st.plotly_chart(fig, use_container_width=True, key="plot_4424a_policy")
+        
+    except Exception as e:
+        st.info(f"Unable to render graph: {str(e)}")
+
 def render_indicator_4431():
     """Render Detection Efficacy graph - exact replica from exploratory view"""
     if df_display.empty or not DATA_AVAILABLE:
@@ -1617,15 +1687,32 @@ def render_indicator_4432b():
         return
     
     try:
-        # Look for ICT-related indicators (these may vary based on available data)
+        # Look for ICT-related indicators (matching exploratory view labels)
         ict_indicators = [
-            "% staff in ICT support",
-            "ICT expenditure (% of total)",
-            "ICT operating cost (% of total operating expenditure)"
+            "Value of additional assessments raised from audits and verification actions by tax type (including penalties and interest) (in thousands in local currency)-Corporate income tax",
+            "Salary expenditure - Derived",
+            "Operating expenditure - Derived",
+            "Operational ICT solutions of the administration are…-Custom built",
+            "Operational ICT solutions of the administration are…-On premises commercial off the shelf (COTS)",
+            "Operational ICT solutions of the administration are…-Software-as-a-Service (SaaS, i.e. cloud based)",
+            "Total tax administration FTEs - Derived"
         ]
         
-        # Find available indicators
-        available_ict = [ind for ind in ict_indicators if ind in df_display['indicator_label'].unique()]
+        # Find available indicators (use partial matching)
+        available_ict = []
+        for ind in ict_indicators:
+            matching = df_display[df_display['indicator_label'].str.contains(ind.split('-')[0].strip(), case=False, na=False)]
+            if not matching.empty:
+                available_ict.append(matching['indicator_label'].iloc[0])
+        
+        # If no matches, try simpler search
+        if not available_ict:
+            simple_ict_terms = ['ICT', 'operational', 'expenditure', 'FTE', 'salary']
+            for term in simple_ict_terms:
+                matching = df_display[df_display['indicator_label'].str.contains(term, case=False, na=False)]
+                if not matching.empty:
+                    available_ict.extend(matching['indicator_label'].unique().tolist()[:3])  # Limit to 3
+                    break
         
         if not available_ict:
             st.info("No data available for Resources and ICT Infrastructure indicators.")
@@ -1685,15 +1772,37 @@ def render_indicator_4432c():
         return
     
     try:
-        # Look for staff-related indicators
+        # Look for staff-related indicators (matching exploratory view labels)
         staff_indicators = [
-            "Number of auditors",
-            "Number of tax officials",
-            "Staff in tax administration"
+            "Staff strength levels -Departures in FY",
+            "Staff strength levels -No. at end of FY",
+            "Staff strength levels -No. at start of FY",
+            "Staff strength levels -Recruitments in FY",
+            "Academic qualifications (No. of staff at the end of FY)-Bachelors degree",
+            "Academic qualifications (No. of staff at the end of FY)-Masters degree (or above)",
+            "Length of service (No. of staff at the end of FY)-10-19 years",
+            "Length of service (No. of staff at the end of FY)-5-9 years",
+            "Length of service (No. of staff at the end of FY)-Over 19 years",
+            "Length of service (No. of staff at the end of FY)-Under 5 years"
         ]
         
-        # Find available indicators
-        available_staff = [ind for ind in staff_indicators if ind in df_display['indicator_label'].unique()]
+        # Find available indicators (use partial matching)
+        available_staff = []
+        for ind in staff_indicators:
+            # Try to match the base part before the dash
+            base_term = ind.split('-')[0].strip() if '-' in ind else ind
+            matching = df_display[df_display['indicator_label'].str.contains(base_term, case=False, na=False)]
+            if not matching.empty:
+                available_staff.append(matching['indicator_label'].iloc[0])
+        
+        # If no matches, try simpler search
+        if not available_staff:
+            simple_staff_terms = ['staff', 'academic', 'qualification', 'length of service', 'recruitment']
+            for term in simple_staff_terms:
+                matching = df_display[df_display['indicator_label'].str.contains(term, case=False, na=False)]
+                if not matching.empty:
+                    available_staff.extend(matching['indicator_label'].unique().tolist()[:3])  # Limit to 3
+                    break
         
         if not available_staff:
             st.info("No data available for Staff Metrics indicators.")
@@ -2480,8 +2589,8 @@ with title_col:
         <p style="color: #555; font-size: 1.05rem; line-height: 1.7; margin: 0;">
             Institutions & Systems — Building robust financial frameworks for sustainable development through efficient resource management, transparent governance, and institutional capacity.
         </p>
-    </div>
-    """, unsafe_allow_html=True)
+</div>
+""", unsafe_allow_html=True)
 
 with nav_col:
     st.markdown("<div style='padding-top: 0.5rem;'>", unsafe_allow_html=True)
@@ -2568,8 +2677,8 @@ if st.session_state.current_view == 1:
     st.markdown("""
     <div class="view-guidance">
         <p>Use the dashboards below to drill into the indicators that provide evidence for the Challenge and Root Cause defined above.</p>
-    </div>
-    """, unsafe_allow_html=True)
+</div>
+""", unsafe_allow_html=True)
 
     # Define topics data
     topics_config = [
@@ -3611,8 +3720,8 @@ elif st.session_state.current_view == 3:
         st.markdown("""
         <h4 class="graph-title">Indicator 4.4.2.4.a – Corruption Loss vs Control of Corruption</h4>
         """, unsafe_allow_html=True)
-        # Note: This is a scatter/dual-axis chart - using the same corruption indicator for now
-        render_indicator_4424()
+        # Scatter plot showing Corruption Loss vs Control of Corruption
+        render_indicator_4424a()
         
         col_nav1, col_nav2, col_nav3 = st.columns([1, 1, 1])
         with col_nav2:
